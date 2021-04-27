@@ -12,10 +12,12 @@ enum layers {
 };
 
 enum custom_keycodes {
-  PLACEHOLDER = SAFE_RANGE, // can always be here
-  EPRM,
-  VRSN,
-  RGB_SLD
+#ifdef ORYX_CONFIGURATOR
+    VRSN = EZ_SAFE_RANGE,
+#else
+    VRSN = SAFE_RANGE,
+#endif
+    RGB_SLD
 };
 
 
@@ -48,7 +50,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
        KC_TAB,          KC_Q,          KC_W,    KC_E,    KC_R,   KC_T,   TG(SYMB),              TG(TXBOLT),     KC_Y, KC_U,    KC_I,    KC_O,    KC_P,              KC_BSLS,
        KC_BSPC,         KC_A,          KC_S,    KC_D,    KC_F,   KC_G,                                          KC_H, KC_J,    KC_K,    KC_L,    LT(MDIA, KC_SCLN), GUI_T(KC_QUOT),
        KC_LSFT,         LCTL_T(KC_Z),  KC_X,    KC_C,    KC_V,   KC_B,   ALL_T(KC_LBRC),        MEH_T(KC_RBRC), KC_N, KC_M,    KC_COMM, KC_DOT,  RCTL_T(KC_SLSH),   KC_RSFT,
-       LT(SYMB,KC_GRV), KC_NO,         KC_LALT, KC_LEFT, KC_RGHT,                                                     KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT,           KC_FN1,
+       LT(SYMB,KC_GRV), KC_NO,         KC_LALT, KC_LEFT, KC_RGHT,                                                     KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT,           TT(SYMB),
 
                                                                  ALT_T(KC_APP), KC_LGUI,         KC_LALT, CTL_T(KC_ESC),
                                                                                 KC_HOME,         KC_PGUP,
@@ -149,70 +151,100 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
          KC_NO,   STN_S2, STN_KL, STN_WL, STN_RL, STN_ST2, KC_NO,        KC_NO,   STN_ST4, STN_RR, STN_BR, STN_GR, STN_SR, STN_ZR,
          KC_NO,   KC_NO,  KC_NO,  KC_NO,  KC_NO,                                           KC_NO,  KC_NO,  KC_NO,  KC_NO,  KC_NO,
 
-                                             KC_NO, KC_NO,       KC_NO, KC_NO,
-                                                    KC_NO,       KC_NO,
-                                      STN_A, STN_O, KC_NO,       KC_NO, STN_E, STN_U
+                                                    KC_NO, KC_NO,        KC_NO, KC_NO,
+                                                           KC_NO,        KC_NO,
+                                             STN_A, STN_O, KC_NO,        KC_NO, STN_E, STN_U
 ),
 };
 
-const uint16_t PROGMEM fn_actions[] = {
-  [1] = ACTION_LAYER_TAP_TOGGLE(SYMB)                // FN1 - Momentary Layer 1 (Symbols)
-};
-
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  switch (keycode) {
-    // dynamically generate these.
-  case EPRM:
-    if (record->event.pressed) {
-      eeconfig_init();
+  if (record->event.pressed) {
+    switch (keycode) {
+      case VRSN:
+        SEND_STRING (QMK_KEYBOARD "/" QMK_KEYMAP " @ " QMK_VERSION);
+        return false;
+      #ifdef RGBLIGHT_ENABLE
+      case RGB_SLD:
+        rgblight_mode(1);
+        return false;
+      #endif
     }
-    return false;
-    break;
-  case VRSN:
-    if (record->event.pressed) {
-      SEND_STRING (QMK_KEYBOARD "/" QMK_KEYMAP " @ " QMK_VERSION);
-    }
-    return false;
-    break;
-  case RGB_SLD:
-    if (record->event.pressed) {
-#ifdef RGBLIGHT_ENABLE
-      rgblight_mode(1);
-#endif
-    }
-    return false;
-    break;
   }
   return true;
-}
-
-// Runs just one time when the keyboard initializes.
-void matrix_init_user(void) {
-    steno_set_mode(STENO_MODE_BOLT);
 };
 
-// Runs constantly in the background, in a loop.
-void matrix_scan_user(void) {
+// Runs just one time when the keyboard initializes.
+void keyboard_post_init_user(void) {
+    steno_set_mode(STENO_MODE_BOLT);
+#ifdef RGBLIGHT_COLOR_LAYER_0
+    rgblight_setrgb(RGBLIGHT_COLOR_LAYER_0);
+#endif
+};
 
-    uint8_t layer = biton32(layer_state);
+// Runs whenever there is a layer state change.
+layer_state_t layer_state_set_user(layer_state_t state) {
+  ergodox_board_led_off();
+  ergodox_right_led_1_off();
+  ergodox_right_led_2_off();
+  ergodox_right_led_3_off();
 
-    ergodox_board_led_off();
-    ergodox_right_led_1_off();
-    ergodox_right_led_2_off();
-    ergodox_right_led_3_off();
-    switch (layer) {
-        case 1:
-            ergodox_right_led_1_on();
-            break;
-        case 2:
-            ergodox_right_led_2_on();
-            break;
-        case 3:
-            ergodox_right_led_3_on();
-            break;
-        default:
-            // none
-            break;
+  uint8_t layer = get_highest_layer(state);
+  switch (layer) {
+      case 0:
+        #ifdef RGBLIGHT_COLOR_LAYER_0
+          rgblight_setrgb(RGBLIGHT_COLOR_LAYER_0);
+        #endif
+        break;
+      case 1:
+        ergodox_right_led_1_on();
+        #ifdef RGBLIGHT_COLOR_LAYER_1
+          rgblight_setrgb(RGBLIGHT_COLOR_LAYER_1);
+        #endif
+        break;
+      case 2:
+        ergodox_right_led_2_on();
+        #ifdef RGBLIGHT_COLOR_LAYER_2
+          rgblight_setrgb(RGBLIGHT_COLOR_LAYER_2);
+        #endif
+        break;
+      case 3:
+        ergodox_right_led_3_on();
+        #ifdef RGBLIGHT_COLOR_LAYER_3
+          rgblight_setrgb(RGBLIGHT_COLOR_LAYER_3);
+        #endif
+        break;
+      case 4:
+        ergodox_right_led_1_on();
+        ergodox_right_led_2_on();
+        #ifdef RGBLIGHT_COLOR_LAYER_4
+          rgblight_setrgb(RGBLIGHT_COLOR_LAYER_4);
+        #endif
+        break;
+      case 5:
+        ergodox_right_led_1_on();
+        ergodox_right_led_3_on();
+        #ifdef RGBLIGHT_COLOR_LAYER_5
+          rgblight_setrgb(RGBLIGHT_COLOR_LAYER_5);
+        #endif
+        break;
+      case 6:
+        ergodox_right_led_2_on();
+        ergodox_right_led_3_on();
+        #ifdef RGBLIGHT_COLOR_LAYER_6
+          rgblight_setrgb(RGBLIGHT_COLOR_LAYER_6);
+        #endif
+        break;
+      case 7:
+        ergodox_right_led_1_on();
+        ergodox_right_led_2_on();
+        ergodox_right_led_3_on();
+        #ifdef RGBLIGHT_COLOR_LAYER_7
+          rgblight_setrgb(RGBLIGHT_COLOR_LAYER_7);
+        #endif
+        break;
+      default:
+        break;
     }
 
+  return state;
 };
