@@ -173,7 +173,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 // Runs just one time when the keyboard initializes.
 void keyboard_post_init_user(void) {
-    steno_set_mode(STENO_MODE_BOLT);
+    steno_set_mode(STENO_MODE_GEMINI);
 #ifdef RGBLIGHT_COLOR_LAYER_0
     rgblight_setrgb(RGBLIGHT_COLOR_LAYER_0);
 #endif
